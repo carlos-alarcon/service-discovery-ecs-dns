@@ -15,7 +15,7 @@ import socket
 ###### Configuration
 
 ecs_clusters = []
-check_health_active = True
+check_health_active = False
 check_health_path = '/health'
 domain = 'servicediscovery.internal'
 
@@ -36,7 +36,7 @@ def get_ip_port(rr):
         ip = socket.gethostbyname(rr['Value'].split(' ')[3])
         return [ip, rr['Value'].split(' ')[2]]
     except:
-        return [None, None] 
+        return [None, None]
 
 def check_health(ip, port):
     try:
@@ -52,12 +52,12 @@ def search_ecs_instance(ip, list_ec2_instances):
     for ec2Instance in list_ec2_instances:
         if list_ec2_instances[ec2Instance]['privateIP'] == ip:
             return list_ec2_instances[ec2Instance]['instanceArn']
-    
+
 def search_task(port, ec2Instance, service, list_tasks):
     for task in list_tasks:
         if list_tasks[task]['instance'] == ec2Instance and {'service': service, 'port': port} in list_tasks[task]['containers']:
             return task
-        
+
 def search_ecs_task(ip, port, service, ecs_data):
     for data in ecs_data:
         ec2Instance = search_ecs_instance(ip, data['ec2Instances'])
@@ -80,7 +80,7 @@ def delete_route53_record(record, comment):
                 }
             ]
         })
-        
+
 def process_records(response, ecs_data):
     for record in response['ResourceRecordSets']:
         if record['Type'] == 'SRV':
@@ -92,7 +92,7 @@ def process_records(response, ecs_data):
                         delete_route53_record(record, 'Service Discovery Health Check failed')
                         print("Record %s deleted" % rr)
                         break
-                        
+
                     if check_health_active:
                         result = "Initial"
                         retries = 3
@@ -126,7 +126,7 @@ def process_records(response, ecs_data):
                         print("ERROR: IP %s exists on multiple cluster instances" % rr['Value'])
                         break
 
-    
+
     if response['IsTruncated']:
         if 'NextRecordIdentifier' in response.keys():
             new_response = route53.list_resource_record_sets(
@@ -196,7 +196,7 @@ def get_ecs_data():
 
 def lambda_handler(event, context):
     #print('Starting')
-    
+
     if len(ecs_clusters) == 0:
         response = ecs.list_clusters()
         for cluster in response['clusterArns']:
@@ -204,10 +204,10 @@ def lambda_handler(event, context):
 
     #print (ecs_clusters)
     response = route53.list_resource_record_sets(HostedZoneId=hostedZoneId)
-    
+
     ecs_data = get_ecs_data()
     #print(ecs_data)
-    
+
     process_records(response, ecs_data)
 
     return 'Service Discovery Health Check finished'
