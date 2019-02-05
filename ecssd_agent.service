@@ -1,0 +1,10 @@
+[Unit]
+Description=Amazon EC2 Container Service Discovery
+
+[Service]
+ExecStart=/usr/local/bin/ecssd_agent
+ExecStopPost=/usr/local/bin/ecssd_agent -remove
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
